@@ -1,0 +1,14 @@
+﻿{
+    "name":  "biblia-da-historia",
+    "productName":  "Biblia da Historia",
+    "version":  "1.0.0",
+    "description":  "Organizador de histÃ³rias: personagens, mundo, linha do tempo, episÃ³dios e catÃ¡logo com imagens.",
+    "main":  "main.js",
+    "scripts":  {
+                    "start":  "electron .",
+                    "build":  "python build.py"
+                },
+    "devDependencies":  {
+                            "electron":  "^33.2.0"
+                        }
+}

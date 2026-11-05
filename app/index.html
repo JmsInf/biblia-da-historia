@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Bíblia da História</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--bg:#14121a;--panel:#1d1a26;--panel2:#262233;--line:#352f46;--tx:#e8e4f0;--mut:#9a93ad;--ac:#b794f6;--ac2:#7c5cd6;--ok:#6fcf97;--warn:#f2c94c}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,Segoe UI,sans-serif;height:100vh;display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-size:16px;margin:0;font-weight:600}
+header input[type=search]{flex:1;max-width:340px;margin-left:auto}
+button,.btn{background:var(--panel2);color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer;font:inherit}
+button:hover{border-color:var(--ac)}
+button.primary{background:var(--ac2);border-color:var(--ac2)}
+input,textarea,select{background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:6px;padding:7px 9px;font:inherit;width:100%}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--ac)}
+textarea{resize:vertical;min-height:90px}
+nav{display:flex;gap:2px;padding:0 12px;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:10px 14px;color:var(--mut);white-space:nowrap}
+nav button.on{color:var(--tx);border-bottom-color:var(--ac)}
+nav .n{font-size:11px;background:var(--panel2);border-radius:9px;padding:1px 7px;margin-left:5px}
+main{flex:1;display:flex;min-height:0}
+.list{width:300px;border-right:1px solid var(--line);display:flex;flex-direction:column;background:var(--panel)}
+.list .tools{padding:10px;display:flex;gap:6px}
+.list .items{overflow:auto;flex:1}
+.item{padding:9px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.item:hover{background:var(--panel2)}
+.item.on{background:var(--panel2);border-left:3px solid var(--ac);padding-left:11px}
+.item b{display:block;font-weight:600}
+.item small{color:var(--mut)}
+.tag{display:inline-block;font-size:11px;padding:0 7px;border-radius:9px;background:var(--panel2);border:1px solid var(--line);color:var(--mut);margin-right:4px}
+.tag.Pronto{color:var(--ok)}.tag.Rascunho,.tag.Revisão{color:var(--warn)}
+.editor{flex:1;overflow:auto;padding:22px 28px}
+.editor .wrap{max-width:760px;margin:auto}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--mut);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+.row{display:flex;gap:12px}.row>*{flex:1}
+.empty{color:var(--mut);text-align:center;margin-top:80px}
+.danger{color:#eb5757}
+.hint{color:var(--mut);font-size:13px;margin:0 0 18px}
+h2{margin:0 0 4px}
+.tl{max-width:760px;margin:auto}
+.item{display:flex;gap:10px;align-items:center}
+.thumb{width:40px;height:40px;border-radius:6px;object-fit:cover;flex:none;background:var(--panel2)}
+.thumb.ph{display:flex;align-items:center;justify-content:center;color:var(--mut);font-weight:600}
+.gal{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:6px}
+.th{position:relative;width:140px;height:180px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.th.main{border-color:var(--ac);width:180px;height:230px}
+.th img{width:100%;height:100%;object-fit:cover;cursor:zoom-in}
+.th .ctl{position:absolute;top:4px;right:4px;left:4px;display:flex;justify-content:space-between;gap:4px}
+.th .ctl button{padding:0 8px;background:#000a;border-color:#0000}
+.th .ctl i{font-size:11px;background:#000a;padding:2px 7px;border-radius:9px;font-style:normal}
+.addimg{width:140px;height:180px;border:2px dashed var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--mut);cursor:pointer}
+.addimg:hover{border-color:var(--ac);color:var(--tx)}
+.lb{position:fixed;inset:0;background:#000d;display:flex;align-items:center;justify-content:center;z-index:9;cursor:zoom-out}
+.lb img{max-width:92vw;max-height:92vh;border-radius:8px}
+.cat{display:grid;gap:18px}
+.card{display:flex;gap:18px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;cursor:pointer;break-inside:avoid}
+.card .pic{width:240px;flex:none}
+.card .pic>img{width:100%;border-radius:8px;display:block}
+.card .pic .ph{height:300px;border:2px dashed var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--mut)}
+.card .mini{display:flex;gap:6px;margin-top:6px}.card .mini img{width:calc(33% - 4px);border-radius:5px;aspect-ratio:1;object-fit:cover}
+.card h3{margin:0}.card small{color:var(--ac)}
+.card p{margin:8px 0 0}.card p b{display:block;font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}
+@media print{
+  header,nav,.noprint{display:none!important}
+  body{background:#fff;color:#000;height:auto;display:block}main{display:block}
+  .editor{overflow:visible;padding:0}
+  .card{background:#fff;border-color:#bbb;color:#000}.card p b,.card small{color:#555}
+}
+.rich{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-height:90px;max-height:480px;overflow:auto;resize:vertical;white-space:normal;word-break:break-word}
+.rich:focus{outline:none;border-color:var(--ac)}
+.rtb{position:sticky;top:-22px;z-index:5;display:flex;align-items:center;gap:6px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin-bottom:16px}
+.rtb span{color:var(--mut);font-size:13px}.rtb small{color:var(--mut);margin-left:auto}
+.rtb .sw{width:22px;height:22px;padding:0;border-radius:50%;border:2px solid #0006}
+.rtb input[type=color]{width:30px;height:26px;padding:0;border:none;background:none;cursor:pointer}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">📖 Bíblia da História</h1>
+  <input type="search" id="q" placeholder="Buscar em tudo…">
+  <button id="exp">Exportar</button>
+  <label class="btn">Importar<input type="file" id="imp" accept=".json" hidden></label>
+</header>
+<nav id="nav"></nav>
+<main id="main"></main>
+
+<script>
+const SECTIONS = {
+  visao:{label:"Visão geral",single:true,fields:[
+    ["titulo","Título da obra","text"],
+    ["logline","Logline (1–2 frases)","area"],
+    ["premissa","Premissa","area"],
+    ["generos","Gênero / subgêneros","text"],
+    ["tom","Tom e estilo (novela vs. série)","area"],
+    ["temas","Temas centrais","area"],
+    ["publico","Público-alvo","text"],
+    ["formato","Formato da série (nº de temporadas, duração do episódio, estilo de animação)","area"],
+    ["referencias","Referências / inspirações","area"],
+    ["pergunta","Pergunta dramática central","area"]
+  ]},
+  personagens:{label:"Personagens",title:"nome",sub:"papel",fields:[
+    ["nome","Nome","text"],
+    ["papel","Papel","select",["Protagonista","Antagonista","Aliado","Mentor","Coadjuvante","Figurante importante"]],
+    ["idade","Idade / espécie","text"],
+    ["aparencia","Aparência (importante para o design de animação)","area"],
+    ["personalidade","Personalidade","area"],
+    ["desejo","Desejo (o que quer)","area"],
+    ["necessidade","Necessidade (o que realmente precisa)","area"],
+    ["medo","Medo / falha","area"],
+    ["conflito","Conflito interno e externo","area"],
+    ["arco","Arco de transformação","area"],
+    ["relacoes","Relações","area"],
+    ["voz","Voz e maneirismos","area"],
+    ["notas","Notas","area"]
+  ]},
+  mundo:{label:"Mundo",title:"nome",sub:"categoria",fields:[
+    ["nome","Nome","text"],
+    ["categoria","Categoria","select",["Local","Sistema de magia","Cultura / povo","Criatura","Facção / organização","Objeto / artefato","Religião / mito","História / lenda","Regra do mundo","Tecnologia"]],
+    ["descricao","Descrição","area"],
+    ["regras","Regras e limites (o que NÃO pode acontecer)","area"],
+    ["visual","Visual / direção de arte","area"],
+    ["ligacoes","Ligações (personagens, eventos, outros elementos)","area"],
+    ["notas","Notas","area"]
+  ]},
+  timeline:{label:"Linha do tempo",title:"titulo",sub:"quando",sortBy:"ordem",fields:[
+    ["titulo","Evento","text"],
+    ["quando","Quando (data, era, ano do mundo)","text"],
+    ["ordem","Ordem de exibição (número)","text"],
+    ["fase","Fase","select",["Antes da história (backstory)","Durante a novela","Durante a série","Futuro / epílogo"]],
+    ["descricao","O que acontece","area"],
+    ["envolvidos","Quem está envolvido","text"],
+    ["consequencias","Consequências","area"]
+  ]},
+  capitulos:{label:"Capítulos / Episódios",title:"titulo",sub:"formato",sortBy:"numero",fields:[
+    ["titulo","Título","text"],
+    ["formato","Formato","select",["Capítulo (novela)","Episódio (série)","Ambos"]],
+    ["numero","Número / ordem","text"],
+    ["status","Status","select",["Ideia","Rascunho","Revisão","Pronto"]],
+    ["resumo","Resumo","area"],
+    ["objetivo","Função na trama (o que muda ao final?)","area"],
+    ["cenas","Cenas (uma por linha)","area"],
+    ["personagens","Personagens presentes","text"],
+    ["gancho","Gancho final","area"],
+    ["notas","Notas","area"]
+  ]},
+  ideias:{label:"Ideias soltas",title:"titulo",sub:"tag",fields:[
+    ["titulo","Título","text"],
+    ["tag","Tag","select",["Cena","Diálogo","Reviravolta","Personagem","Mundo","Pergunta em aberto","Outro"]],
+    ["texto","Ideia","area"]
+  ]}
+};
+const KEY="biblia-historia-v1";
+let db = JSON.parse(localStorage.getItem(KEY)||"null") || {};
+for(const k in SECTIONS){ if(!db[k]) db[k]= SECTIONS[k].single?{}:[]; }
+let cur = localStorage.getItem(KEY+"-tab")||"visao", sel=null, q="";
+const save=()=>localStorage.setItem(KEY,JSON.stringify(db));
+const uid=()=>Math.random().toString(36).slice(2,10);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function nav(){
+  document.getElementById("nav").innerHTML=Object.entries(SECTIONS).map(([k,s])=>
+    `<button class="${k===cur?"on":""}" data-k="${k}">${s.label}${s.single?"":`<span class="n">${db[k].length}</span>`}</button>`).join("");
+  document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{cur=b.dataset.k;sel=null;localStorage.setItem(KEY+"-tab",cur);render()});
+}
+/* ---------- texto rico (cores) ---------- */
+const DEF_COLOR="#e8e4f0";
+const COLORS=["#f2994a","#eb5757","#f2c94c","#6fcf97","#56ccf2","#bb86fc","#ff7eb6"];
+function normColor(c){
+  if(!c)return"";
+  let m=c.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+  if(m)c="#"+[m[1],m[2],m[3]].map(x=>(+x).toString(16).padStart(2,"0")).join("");
+  c=c.toLowerCase();
+  return /^#[0-9a-f]{6}$/.test(c)&&c!==DEF_COLOR?c:"";
+}
+function cleanNode(node){let out="";
+  node.childNodes.forEach(n=>{
+    if(n.nodeType===3)out+=esc(n.nodeValue);
+    else if(n.nodeType===1){const t=n.tagName.toLowerCase();
+      if(t==="br")out+="<br>";
+      else if(t==="span"||t==="font"){const c=normColor(n.style.color||n.getAttribute("color")),inner=cleanNode(n);
+        out+=c?`<span style="color:${c}">${inner}</span>`:inner}
+      else if(t==="b"||t==="strong")out+=`<b>${cleanNode(n)}</b>`;
+      else if(t==="div"||t==="p")out+=(out&&!out.endsWith("<br>")?"<br>":"")+cleanNode(n);
+      else out+=cleanNode(n)}});
+  return out}
+function rich(val){
+  val=val||"";
+  if(!/<(br|span|b|div|font)\b/i.test(val))return esc(val).replace(/\n/g,"<br>");
+  const d=document.createElement("div");d.innerHTML=val;return cleanNode(d)}
+function toolbarHTML(){
+  return `<div class="rtb noprint"><span>Destacar palavra:</span>${COLORS.map(c=>`<button class="sw" data-c="${c}" style="background:${c}" title="Aplicar cor"></button>`).join("")}
+  <input type="color" id="cpick" value="#ff0000" title="Cor personalizada"><button data-c="${DEF_COLOR}">Limpar cor</button><button data-b="1"><b>N</b></button>
+  <small>Selecione um trecho de texto e clique numa cor.</small></div>`}
+function bindToolbar(root){
+  const apply=(cmd,val)=>{
+    const s=getSelection();if(!s.anchorNode)return;
+    const el=(s.anchorNode.nodeType===3?s.anchorNode.parentElement:s.anchorNode).closest(".rich");
+    if(!el)return;
+    document.execCommand("styleWithCSS",false,true);document.execCommand(cmd,false,val);
+    el.dispatchEvent(new Event("input"))};
+  root.querySelectorAll(".rtb button").forEach(b=>{
+    b.onmousedown=e=>e.preventDefault();
+    b.onclick=()=>b.dataset.b?apply("bold"):apply("foreColor",b.dataset.c)});
+  const p=root.querySelector("#cpick");
+  if(p){p.onchange=()=>apply("foreColor",p.value)}
+}
+function fieldHTML(f,val){
+  const [id,label,type,opts]=f;
+  let inp;
+  if(type==="area") inp=`<div class="rich" contenteditable="true" data-r="${id}">${rich(val)}</div>`;
+  else if(type==="select") inp=`<select data-f="${id}"><option value=""></option>${opts.map(o=>`<option ${o===val?"selected":""}>${o}</option>`).join("")}</select>`;
+  else inp=`<input data-f="${id}" value="${esc(val)}">`;
+  return `<div class="field"><label>${label}</label>${inp}</div>`;
+}
+function bind(root,obj){
+  root.querySelectorAll("[data-r]").forEach(el=>{
+    el.onpaste=e=>{if(e.clipboardData.files.length)return;e.preventDefault();document.execCommand("insertText",false,e.clipboardData.getData("text/plain"))};
+    el.oninput=()=>{obj[el.dataset.r]=cleanNode(el);save()};
+  });
+  bindToolbar(root);
+  root.querySelectorAll("[data-f]").forEach(el=>{
+    el.oninput=()=>{obj[el.dataset.f]=el.value;save();
+      if(el.dataset.f===SECTIONS[cur].title||el.dataset.f===SECTIONS[cur].sub||el.dataset.f===SECTIONS[cur].sortBy||el.dataset.f==="status") renderList();
+      if(cur==="visao"&&el.dataset.f==="titulo") setTitle();};
+  });
+}
+function setTitle(){document.getElementById("title").textContent="📖 "+(db.visao.titulo||"Bíblia da História")}
+function sorted(k){
+  const s=SECTIONS[k],arr=[...db[k]];
+  if(s.sortBy) arr.sort((a,b)=>(parseFloat(a[s.sortBy])||1e9)-(parseFloat(b[s.sortBy])||1e9));
+  return arr;
+}
+/* ---------- imagens (IndexedDB) ---------- */
+const imgCache={};
+let idb;
+function idbOpen(){return new Promise((res,rej)=>{const r=indexedDB.open("biblia-img",1);
+  r.onupgradeneeded=()=>r.result.createObjectStore("imgs",{keyPath:"id"});
+  r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+const idbTx=m=>idb.transaction("imgs",m).objectStore("imgs");
+const idbPut=(id,data)=>new Promise(r=>{const q=idbTx("readwrite").put({id,data});q.onsuccess=r;q.onerror=r});
+const idbDel=id=>new Promise(r=>{const q=idbTx("readwrite").delete(id);q.onsuccess=r;q.onerror=r});
+const idbAll=()=>new Promise(r=>{const q=idbTx("readonly").getAll();q.onsuccess=()=>r(q.result);q.onerror=()=>r([])});
+function shrink(file,max=1200){return new Promise(res=>{
+  const fr=new FileReader();fr.onload=()=>{const im=new Image();im.onload=()=>{
+    const k=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement("canvas");
+    c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+    c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+    let d=c.toDataURL("image/webp",.88);if(!d.startsWith("data:image/webp"))d=c.toDataURL("image/jpeg",.88);
+    res(d)};im.src=fr.result};fr.readAsDataURL(file)})}
+async function addImages(files,o){
+  for(const f of files){ if(!f.type.startsWith("image/"))continue;
+    const data=await shrink(f),id=uid()+uid();
+    imgCache[id]=data;await idbPut(id,data);(o.imgs=o.imgs||[]).push(id)}
+  save();render()}
+function removeImg(o,id){o.imgs=o.imgs.filter(x=>x!==id);delete imgCache[id];idbDel(id);save();render()}
+function mainImg(o){return o.imgs&&o.imgs[0]?imgCache[o.imgs[0]]:null}
+function lightbox(src){const d=document.createElement("div");d.className="lb";d.innerHTML=`<img src="${src}">`;d.onclick=()=>d.remove();document.body.appendChild(d)}
+let view="edit";
+
+function sorted(k){
+  const s=SECTIONS[k],arr=[...db[k]];
+  if(s.sortBy) arr.sort((a,b)=>(parseFloat(a[s.sortBy])||1e9)-(parseFloat(b[s.sortBy])||1e9));
+  return arr;
+}
+const filtered=()=>sorted(cur).filter(o=>!q||JSON.stringify(o).toLowerCase().includes(q));
+function renderList(){
+  const s=SECTIONS[cur],box=document.getElementById("items");
+  if(!box) return;
+  box.innerHTML=filtered().map(o=>{const im=mainImg(o);return `<div class="item ${o.id===sel?"on":""}" data-id="${o.id}">
+    ${im?`<img class="thumb" src="${im}">`:`<div class="thumb ph">${esc((o[s.title]||"?")[0])}</div>`}
+    <div><b>${esc(o[s.title])||"<i>(sem título)</i>"}</b>
+    <small>${o.status?`<span class="tag ${o.status}">${o.status}</span>`:""}${esc(o[s.sub]||"")}${cur==="capitulos"&&o.numero?" · #"+esc(o.numero):""}</small></div></div>`}).join("")
+    ||`<div class="empty" style="margin-top:30px">Nada aqui ainda.</div>`;
+  box.querySelectorAll(".item").forEach(i=>i.onclick=()=>{sel=i.dataset.id;view="edit";render()});
+}
+function galleryHTML(o){
+  return `<div class="gal">${(o.imgs||[]).map((id,i)=>`<div class="th ${i?"":"main"}"><img src="${imgCache[id]||""}" data-zoom="${id}">
+    <span class="ctl">${i?`<button data-main="${id}" title="Tornar principal">★</button>`:`<i>principal</i>`}<button data-rm="${id}" title="Remover">×</button></span></div>`).join("")}
+    <label class="addimg">+ Imagem<input type="file" id="file" accept="image/*" multiple hidden></label></div>
+    <p class="hint">Adicione, arraste ou cole (Ctrl+V) imagens. Imagens geradas por IA também: salve o arquivo ou copie e cole aqui. A primeira é a principal.</p>`;
+}
+function catalogHTML(){
+  const s=SECTIONS[cur];
+  const cards=filtered().map(o=>{const im=mainImg(o);
+    const body=s.fields.filter(f=>f[0]!==s.title&&f[0]!==s.sub&&o[f[0]]).map(f=>`<p><b>${f[1].replace(/ \(.*\)/,"")}</b>${f[2]==="area"?rich(o[f[0]]):esc(o[f[0]])}</p>`).join("");
+    const extra=(o.imgs||[]).slice(1,4).map(id=>`<img src="${imgCache[id]}">`).join("");
+    return `<div class="card" data-id="${o.id}"><div class="pic">${im?`<img src="${im}">`:`<div class="ph">sem imagem</div>`}${extra?`<div class="mini">${extra}</div>`:""}</div>
+    <div class="txt"><h3>${esc(o[s.title])||"(sem título)"}</h3><small>${esc(o[s.sub]||"")}</small>${body}</div></div>`}).join("");
+  return `<div class="editor"><div class="wrap" style="max-width:1000px"><div class="noprint" style="display:flex;gap:8px;align-items:center;margin-bottom:16px"><h2 style="flex:1">Catálogo — ${s.label}</h2><button id="back">Voltar à edição</button><button id="print" class="primary">Imprimir / salvar PDF</button></div><div class="cat">${cards||'<div class="empty">Nada aqui ainda.</div>'}</div></div></div>`;
+}
+function render(){
+  nav(); setTitle();
+  const s=SECTIONS[cur],m=document.getElementById("main");
+  if(s.single){
+    m.innerHTML=`<div class="editor"><div class="wrap"><h2>${s.label}</h2><p class="hint">A base de tudo. Preencha o que já souber; o resto fica para depois.</p>${toolbarHTML()}${s.fields.map(f=>fieldHTML(f,db[cur][f[0]])).join("")}</div></div>`;
+    bind(m,db[cur]); return;
+  }
+  if(view==="catalog"){
+    m.innerHTML=catalogHTML();
+    document.getElementById("back").onclick=()=>{view="edit";render()};
+    document.getElementById("print").onclick=()=>print();
+    m.querySelectorAll(".card").forEach(c=>c.onclick=()=>{sel=c.dataset.id;view="edit";render()});
+    return;
+  }
+  const o=db[cur].find(x=>x.id===sel);
+  m.innerHTML=`<div class="list"><div class="tools"><button class="primary" id="add" style="flex:1">+ Novo</button><button id="cat">Catálogo</button></div><div class="items" id="items"></div></div>
+  <div class="editor" id="ed"><div class="wrap">${o?
+    `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h2>${esc(o[s.title])||"Sem título"}</h2><span><button id="dup">Duplicar</button> <button id="del" class="danger">Excluir</button></span></div>`+
+    galleryHTML(o)+toolbarHTML()+s.fields.map(f=>fieldHTML(f,o[f[0]])).join("")
+    :`<div class="empty">Selecione um item ou crie um novo.</div>`}</div></div>`;
+  renderList();
+  document.getElementById("cat").onclick=()=>{view="catalog";render()};
+  document.getElementById("add").onclick=()=>{const n={id:uid()};db[cur].push(n);sel=n.id;save();render();
+    const f=document.querySelector("[data-f]");f&&f.focus()};
+  if(o){
+    bind(m,o);
+    document.getElementById("del").onclick=()=>{if(confirm("Excluir este item?")){(o.imgs||[]).forEach(id=>{delete imgCache[id];idbDel(id)});db[cur]=db[cur].filter(x=>x.id!==o.id);sel=null;save();render()}};
+    document.getElementById("dup").onclick=()=>{const n={...o,id:uid(),imgs:[],[s.title]:(o[s.title]||"")+" (cópia)"};db[cur].push(n);sel=n.id;save();render()};
+    document.getElementById("file").onchange=e=>addImages([...e.target.files],o);
+    m.querySelectorAll("[data-zoom]").forEach(i=>i.onclick=()=>lightbox(imgCache[i.dataset.zoom]));
+    m.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{if(confirm("Remover esta imagem?"))removeImg(o,b.dataset.rm)});
+    m.querySelectorAll("[data-main]").forEach(b=>b.onclick=()=>{const id=b.dataset.main;o.imgs=[id,...o.imgs.filter(x=>x!==id)];save();render()});
+    const ed=document.getElementById("ed");
+    ed.ondragover=e=>e.preventDefault();
+    ed.ondrop=e=>{e.preventDefault();addImages([...e.dataTransfer.files],o)};
+  }
+}
+document.onpaste=e=>{
+  if(SECTIONS[cur].single||view!=="edit")return;
+  const o=db[cur].find(x=>x.id===sel);if(!o)return;
+  const fs=[...(e.clipboardData?.files||[])].filter(f=>f.type.startsWith("image/"));
+  if(fs.length){e.preventDefault();addImages(fs,o)}};
+document.getElementById("q").oninput=e=>{q=e.target.value.toLowerCase();
+  if(q&&SECTIONS[cur].single){cur=Object.keys(SECTIONS)[1];render()} else if(view==="catalog")render(); else renderList()};
+document.getElementById("exp").onclick=()=>{
+  const images={};Object.keys(imgCache).forEach(k=>images[k]=imgCache[k]);
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify({db,images})],{type:"application/json"}));
+  a.download="biblia-da-historia-"+new Date().toISOString().slice(0,10)+".json";a.click()};
+document.getElementById("imp").onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  f.text().then(async t=>{try{let d=JSON.parse(t),imgs={};
+    if(d.db){imgs=d.images||{};d=d.db}
+    if(confirm("Substituir todos os dados atuais pelo arquivo?")){
+      for(const id of Object.keys(imgCache)){await idbDel(id);delete imgCache[id]}
+      for(const [id,data] of Object.entries(imgs)){imgCache[id]=data;await idbPut(id,data)}
+      db=d;for(const k in SECTIONS)if(!db[k])db[k]=SECTIONS[k].single?{}:[];save();sel=null;render()}}
+    catch{alert("Arquivo inválido.")}})};
+(async()=>{try{idb=await idbOpen();(await idbAll()).forEach(r=>imgCache[r.id]=r.data)}catch(e){console.warn("IndexedDB indisponível",e)}render()})();
+</script>
+</body>
+</html>
