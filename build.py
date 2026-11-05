@@ -26,7 +26,7 @@ def make(plat, exe_from, exe_to):
     app = os.path.join(out, "resources", "app")
     os.makedirs(app)
     shutil.copytree("app", os.path.join(app, "app"))
-    for f in ("main.js", "package.json"): shutil.copy(f, app)
+    for f in ("main.js", "preload.js", "package.json"): shutil.copy(f, app)
     return out
 
 # Windows -> .zip

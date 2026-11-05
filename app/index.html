@@ -76,6 +76,15 @@ h2{margin:0 0 4px}
 .rtb span{color:var(--mut);font-size:13px}.rtb small{color:var(--mut);margin-left:auto}
 .rtb .sw{width:22px;height:22px;padding:0;border-radius:50%;border:2px solid #0006}
 .rtb input[type=color]{width:30px;height:26px;padding:0;border:none;background:none;cursor:pointer}
+.th .cap{position:absolute;left:0;right:0;bottom:0;background:#000b;font-style:normal;font-size:12px;text-align:center;padding:2px 4px}
+details.gen,details.cfg{border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:10px 0 18px;background:var(--panel)}
+details.cfg{background:none;margin:6px 0 14px}
+details>summary{cursor:pointer;font-weight:600}
+details.gen>summary{margin-bottom:10px}
+.chk{display:flex;gap:16px;flex-wrap:wrap}.chk label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}.chk input{width:auto}
+code{background:var(--bg);padding:1px 5px;border-radius:4px}
+.card .mini figure{margin:0;width:calc(33% - 4px);text-align:center}.card .mini figure img{width:100%;border-radius:5px;aspect-ratio:1;object-fit:cover}
+.card .mini figcaption{font-size:11px;color:var(--mut)}
 </style>
 </head>
 <body>
@@ -251,14 +260,150 @@ function shrink(file,max=1200){return new Promise(res=>{
     c.getContext("2d").drawImage(im,0,0,c.width,c.height);
     let d=c.toDataURL("image/webp",.88);if(!d.startsWith("data:image/webp"))d=c.toDataURL("image/jpeg",.88);
     res(d)};im.src=fr.result};fr.readAsDataURL(file)})}
-async function addImages(files,o){
+async function addImages(files,o,label){
   for(const f of files){ if(!f.type.startsWith("image/"))continue;
     const data=await shrink(f),id=uid()+uid();
-    imgCache[id]=data;await idbPut(id,data);(o.imgs=o.imgs||[]).push(id)}
+    imgCache[id]=data;await idbPut(id,data);(o.imgs=o.imgs||[]).push(id);if(label)(o.lab=o.lab||{})[id]=label}
   save();render()}
-function removeImg(o,id){o.imgs=o.imgs.filter(x=>x!==id);delete imgCache[id];idbDel(id);save();render()}
+function removeImg(o,id){o.imgs=o.imgs.filter(x=>x!==id);if(o.lab)delete o.lab[id];delete imgCache[id];idbDel(id);save();render()}
 function mainImg(o){return o.imgs&&o.imgs[0]?imgCache[o.imgs[0]]:null}
 function lightbox(src){const d=document.createElement("div");d.className="lb";d.innerHTML=`<img src="${src}">`;d.onclick=()=>d.remove();document.body.appendChild(d)}
+/* ---------- gerador de imagens (Stable Diffusion local: AUTOMATIC1111 / Forge / SD.Next) ---------- */
+const SD_KEY=KEY+"-sd";
+const SD_DEF={url:"http://127.0.0.1:7860",
+  prefix:"character design sheet, full body, standing, neutral pose, plain white background, clean lineart, flat colors, high quality",
+  negative:"blurry, low quality, extra limbs, deformed, text, watermark, cropped, multiple characters, busy background",
+  steps:25,cfg:7,w:512,h:768,sampler:"",model:""};
+let sdCfg={...SD_DEF,...JSON.parse(localStorage.getItem(SD_KEY)||"{}")};
+const sdSave=()=>localStorage.setItem(SD_KEY,JSON.stringify(sdCfg));
+const SD_VIEWS=[
+  ["Frente","front view, facing the viewer"],
+  ["Perfil","side view, profile view, facing left"],
+  ["Costas","back view, seen from behind, facing away from the viewer, back of head"],
+  ["3/4","three-quarter view"],
+  ["Perfil (direita)","side view, profile view, facing right"]];
+const genRes={};          // idDoItem -> [{src,label}]
+let sdModels=[];
+const plainText=h=>{const d=document.createElement("div");d.innerHTML=rich(h||"");return d.textContent.trim()};
+const b64=s=>s.replace(/^data:[^,]+,/,"");
+async function sdCall(path,body){
+  const url=sdCfg.url.replace(/\/+$/,"")+path;
+  if(window.native&&window.native.sd)return window.native.sd(url,body||null);
+  const r=await fetch(url,{method:body?"POST":"GET",headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined});
+  if(!r.ok)throw new Error(r.status+" "+(await r.text()).slice(0,200));
+  return r.json();
+}
+function genDefaults(o){
+  const g=o.gen=o.gen||{};
+  if(g.prompt===undefined)g.prompt=[o.nome,plainText(o.aparencia)].filter(Boolean).join(", ");
+  if(!g.views)g.views=["Frente","Perfil","Costas"];
+  if(!g.n)g.n=1;
+  if(g.same===undefined)g.same=true;
+  if(g.den===undefined)g.den=0.6;
+  return g;
+}
+function genPanelHTML(o){
+  const g=genDefaults(o);
+  return `<details class="gen" ${g.open?"open":""}><summary>🎨 Gerar imagens do personagem (Stable Diffusion local)</summary>
+  <div class="field"><label>Descrição visual para o gerador (inglês funciona melhor)</label>
+    <textarea id="g-prompt" rows="3">${esc(g.prompt)}</textarea>
+    <button id="g-reload" style="margin-top:6px">Recarregar a partir de “Aparência”</button></div>
+  <div class="field"><label>Vistas a gerar</label><div class="chk">${SD_VIEWS.map(v=>`<label><input type="checkbox" data-view="${v[0]}" ${g.views.includes(v[0])?"checked":""}> ${v[0]}</label>`).join("")}</div></div>
+  <div class="row"><div class="field"><label>Variações por vista</label><input type="number" id="g-n" min="1" max="8" value="${g.n}"></div>
+    <div class="field"><label>Seed (vazio = aleatória)</label><input id="g-seed" value="${esc(g.seed||"")}"></div></div>
+  <div class="chk" style="margin-bottom:10px"><label><input type="checkbox" id="g-same" ${g.same?"checked":""}> Mesma seed em todas as vistas (ajuda a manter o personagem parecido)</label></div>
+  <div class="chk" style="margin-bottom:10px"><label><input type="checkbox" id="g-ref" ${g.ref?"checked":""}> Usar a imagem principal como referência (img2img)</label>
+    <label style="margin-left:14px">Fidelidade à referência <input type="range" id="g-den" min="0.2" max="0.95" step="0.05" value="${g.den}" style="width:140px;vertical-align:middle"> <span id="g-denv">${g.den}</span></label></div>
+  <details class="cfg"><summary>Configurações da conexão e do modelo</summary>
+    <div class="field"><label>Endereço da API</label><div style="display:flex;gap:6px"><input id="c-url" value="${esc(sdCfg.url)}"><button id="c-test">Testar / listar modelos</button></div>
+      <p class="hint" style="margin:6px 0 0">Abra o AUTOMATIC1111 (ou Forge) com <code>--api</code>. Se usar o app em navegador (não o programa instalado), acrescente <code>--cors-allow-origins=*</code>.</p></div>
+    <div class="field"><label>Modelo (checkpoint)</label><select id="c-model"><option value="">(o que estiver carregado)</option>${sdModels.map(m=>`<option ${m===sdCfg.model?"selected":""}>${esc(m)}</option>`).join("")}</select></div>
+    <div class="field"><label>Estilo base (acrescentado a todos os prompts)</label><textarea id="c-prefix" rows="2">${esc(sdCfg.prefix)}</textarea></div>
+    <div class="field"><label>Prompt negativo</label><textarea id="c-neg" rows="2">${esc(sdCfg.negative)}</textarea></div>
+    <div class="row"><div class="field"><label>Passos</label><input type="number" id="c-steps" value="${sdCfg.steps}"></div><div class="field"><label>CFG</label><input type="number" id="c-cfg" step="0.5" value="${sdCfg.cfg}"></div>
+      <div class="field"><label>Largura</label><input type="number" id="c-w" step="64" value="${sdCfg.w}"></div><div class="field"><label>Altura</label><input type="number" id="c-h" step="64" value="${sdCfg.h}"></div>
+      <div class="field"><label>Sampler</label><input id="c-sampler" placeholder="padrão" value="${esc(sdCfg.sampler)}"></div></div>
+  </details>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="primary" id="g-go">Gerar</button><button id="g-sheet" title="Junta Frente, Perfil e Costas rotulados numa só imagem">Montar folha de modelo</button><span id="g-status" class="hint" style="margin:0"></span></div>
+  <div id="g-results" class="gal" style="margin-top:12px"></div>
+  </details>`;
+}
+function dataURLtoFile(src,name){
+  const [h,d]=src.split(",");const bin=atob(d),u=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+  return new File([u],name,{type:h.match(/:(.*?);/)[1]});
+}
+function renderGenResults(root,o){
+  const box=root.querySelector("#g-results");if(!box)return;
+  const list=genRes[o.id]||[];
+  box.innerHTML=list.map((r,i)=>`<div class="th"><img src="${r.src}" data-gzoom="${i}"><em class="cap">${esc(r.label)}</em>
+    <span class="ctl"><button data-gsave="${i}" title="Salvar na galeria">Salvar</button><button data-gdrop="${i}" title="Descartar">×</button></span></div>`).join("")
+    +(list.length>1?`<button id="g-saveall" style="align-self:center">Salvar todas</button>`:"");
+  box.querySelectorAll("[data-gzoom]").forEach(i=>i.onclick=()=>lightbox(list[i.dataset.gzoom].src));
+  box.querySelectorAll("[data-gdrop]").forEach(b=>b.onclick=()=>{list.splice(+b.dataset.gdrop,1);renderGenResults(root,o)});
+  box.querySelectorAll("[data-gsave]").forEach(b=>b.onclick=async()=>{const r=list.splice(+b.dataset.gsave,1)[0];await addImages([dataURLtoFile(r.src,"g.png")],o,r.label)});
+  const all=box.querySelector("#g-saveall");
+  if(all)all.onclick=async()=>{const rs=list.splice(0);for(const r of rs)await addImages([dataURLtoFile(r.src,"g.png")],o,r.label)};
+}
+function bindGen(root,o){
+  const g=genDefaults(o),$=id=>root.querySelector("#"+id);
+  root.querySelector("details.gen").ontoggle=e=>{g.open=e.target.open;save()};
+  $("g-prompt").oninput=e=>{g.prompt=e.target.value;save()};
+  $("g-reload").onclick=()=>{g.prompt=[o.nome,plainText(o.aparencia)].filter(Boolean).join(", ");$("g-prompt").value=g.prompt;save()};
+  root.querySelectorAll("[data-view]").forEach(c=>c.onchange=()=>{g.views=[...root.querySelectorAll("[data-view]:checked")].map(x=>x.dataset.view);save()});
+  $("g-n").onchange=e=>{g.n=Math.max(1,Math.min(8,+e.target.value||1));save()};
+  $("g-seed").oninput=e=>{g.seed=e.target.value.trim();save()};
+  $("g-same").onchange=e=>{g.same=e.target.checked;save()};
+  $("g-ref").onchange=e=>{g.ref=e.target.checked;save()};
+  $("g-den").oninput=e=>{g.den=+e.target.value;$("g-denv").textContent=g.den;save()};
+  const cfgBind=(id,key,num)=>{$(id).oninput=e=>{sdCfg[key]=num?(+e.target.value||SD_DEF[key]):e.target.value;sdSave()}};
+  cfgBind("c-url","url");cfgBind("c-prefix","prefix");cfgBind("c-neg","negative");cfgBind("c-sampler","sampler");
+  cfgBind("c-steps","steps",1);cfgBind("c-cfg","cfg",1);cfgBind("c-w","w",1);cfgBind("c-h","h",1);
+  $("c-model").onchange=e=>{sdCfg.model=e.target.value;sdSave()};
+  const status=t=>$("g-status").textContent=t;
+  $("c-test").onclick=async()=>{
+    status("Conectando…");
+    try{const r=await sdCall("/sdapi/v1/sd-models");sdModels=r.map(m=>m.title);
+      const sel=$("c-model");sel.innerHTML=`<option value="">(o que estiver carregado)</option>`+sdModels.map(m=>`<option ${m===sdCfg.model?"selected":""}>${esc(m)}</option>`).join("");
+      status("Conectado. "+sdModels.length+" modelo(s) encontrado(s).")}
+    catch(e){status("Falha na conexão: "+e.message+" — o Stable Diffusion está aberto com --api?")}};
+  $("g-go").onclick=async()=>{
+    if(!g.views.length){status("Marque ao menos uma vista.");return}
+    const go=$("g-go");go.disabled=true;
+    const ref=g.ref&&o.imgs&&o.imgs[0]?b64(imgCache[o.imgs[0]]):null;
+    const seed=g.seed!==""&&g.seed!==undefined&&!isNaN(+g.seed)?+g.seed:(g.same?Math.floor(Math.random()*4294967295):-1);
+    try{
+      for(let i=0;i<g.views.length;i++){
+        const label=g.views[i],vp=SD_VIEWS.find(v=>v[0]===label)[1];
+        status(`Gerando ${label} (${i+1}/${g.views.length})…`);
+        const body={prompt:`(${vp}:1.3), ${g.prompt}, ${sdCfg.prefix}`,negative_prompt:sdCfg.negative,
+          steps:sdCfg.steps,cfg_scale:sdCfg.cfg,width:sdCfg.w,height:sdCfg.h,seed,n_iter:g.n,batch_size:1,
+          override_settings:sdCfg.model?{sd_model_checkpoint:sdCfg.model}:{},override_settings_restore_afterwards:true};
+        if(sdCfg.sampler)body.sampler_name=sdCfg.sampler;
+        if(ref){body.init_images=[ref];body.denoising_strength=g.den}
+        const r=await sdCall(ref?"/sdapi/v1/img2img":"/sdapi/v1/txt2img",body);
+        (genRes[o.id]=genRes[o.id]||[]).push(...r.images.slice(0,g.n).map(b=>({src:"data:image/png;base64,"+b,label})));
+        renderGenResults(root,o);
+      }
+      status("Pronto. Clique em “Salvar” nas imagens que quiser manter.");
+    }catch(e){status("Erro: "+e.message+" — verifique se o Stable Diffusion está aberto com --api.")}
+    go.disabled=false};
+  $("g-sheet").onclick=async()=>{try{await composeSheet(o)}catch(e){status(e.message)}};
+  renderGenResults(root,o);
+}
+async function composeSheet(o){
+  const order=["Frente","3/4","Perfil","Perfil (direita)","Costas"];
+  const ids=order.map(l=>(o.imgs||[]).find(id=>o.lab&&o.lab[id]===l)).filter(Boolean);
+  if(ids.length<2)throw new Error("Salve ao menos 2 vistas rotuladas (Frente, Perfil, Costas) na galeria antes de montar a folha.");
+  const ims=await Promise.all(ids.map(id=>new Promise(r=>{const im=new Image();im.onload=()=>r(im);im.src=imgCache[id]})));
+  const H=700,pad=30,cap=40,ws=ims.map(im=>Math.round(im.width*H/im.height));
+  const c=document.createElement("canvas");c.width=ws.reduce((a,b)=>a+b,0)+pad*(ims.length+1);c.height=H+cap+pad*2;
+  const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);
+  let px=pad;x.fillStyle="#222";x.font="22px sans-serif";x.textAlign="center";
+  ims.forEach((im,i)=>{x.drawImage(im,px,pad,ws[i],H);x.fillText(o.lab[ids[i]],px+ws[i]/2,pad+H+28);px+=ws[i]+pad});
+  const blob=await new Promise(r=>c.toBlob(r,"image/png"));
+  await addImages([new File([blob],"folha.png",{type:"image/png"})],o,"Folha de modelo");
+}
 let view="edit";
 
 function sorted(k){
@@ -278,16 +423,16 @@ function renderList(){
   box.querySelectorAll(".item").forEach(i=>i.onclick=()=>{sel=i.dataset.id;view="edit";render()});
 }
 function galleryHTML(o){
-  return `<div class="gal">${(o.imgs||[]).map((id,i)=>`<div class="th ${i?"":"main"}"><img src="${imgCache[id]||""}" data-zoom="${id}">
-    <span class="ctl">${i?`<button data-main="${id}" title="Tornar principal">★</button>`:`<i>principal</i>`}<button data-rm="${id}" title="Remover">×</button></span></div>`).join("")}
+  return `<div class="gal">${(o.imgs||[]).map((id,i)=>`<div class="th ${i?"":"main"}"><img src="${imgCache[id]||""}" data-zoom="${id}">${o.lab&&o.lab[id]?`<em class="cap">${esc(o.lab[id])}</em>`:""}
+    <span class="ctl">${i?`<button data-main="${id}" title="Tornar principal">★</button>`:`<i>principal</i>`}<button data-lab="${id}" title="Rótulo (Frente, Perfil, Costas…)">✎</button><button data-rm="${id}" title="Remover">×</button></span></div>`).join("")}
     <label class="addimg">+ Imagem<input type="file" id="file" accept="image/*" multiple hidden></label></div>
-    <p class="hint">Adicione, arraste ou cole (Ctrl+V) imagens. Imagens geradas por IA também: salve o arquivo ou copie e cole aqui. A primeira é a principal.</p>`;
+    <p class="hint">Adicione, arraste ou cole (Ctrl+V) imagens. Imagens geradas por IA também: salve o arquivo ou copie e cole aqui. A primeira é a principal.</p>`+(cur==="personagens"?genPanelHTML(o):"");
 }
 function catalogHTML(){
   const s=SECTIONS[cur];
   const cards=filtered().map(o=>{const im=mainImg(o);
     const body=s.fields.filter(f=>f[0]!==s.title&&f[0]!==s.sub&&o[f[0]]).map(f=>`<p><b>${f[1].replace(/ \(.*\)/,"")}</b>${f[2]==="area"?rich(o[f[0]]):esc(o[f[0]])}</p>`).join("");
-    const extra=(o.imgs||[]).slice(1,4).map(id=>`<img src="${imgCache[id]}">`).join("");
+    const extra=(o.imgs||[]).slice(1,4).map(id=>`<figure><img src="${imgCache[id]}"><figcaption>${esc((o.lab&&o.lab[id])||"")}</figcaption></figure>`).join("");
     return `<div class="card" data-id="${o.id}"><div class="pic">${im?`<img src="${im}">`:`<div class="ph">sem imagem</div>`}${extra?`<div class="mini">${extra}</div>`:""}</div>
     <div class="txt"><h3>${esc(o[s.title])||"(sem título)"}</h3><small>${esc(o[s.sub]||"")}</small>${body}</div></div>`}).join("");
   return `<div class="editor"><div class="wrap" style="max-width:1000px"><div class="noprint" style="display:flex;gap:8px;align-items:center;margin-bottom:16px"><h2 style="flex:1">Catálogo — ${s.label}</h2><button id="back">Voltar à edição</button><button id="print" class="primary">Imprimir / salvar PDF</button></div><div class="cat">${cards||'<div class="empty">Nada aqui ainda.</div>'}</div></div></div>`;
@@ -324,6 +469,8 @@ function render(){
     m.querySelectorAll("[data-zoom]").forEach(i=>i.onclick=()=>lightbox(imgCache[i.dataset.zoom]));
     m.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{if(confirm("Remover esta imagem?"))removeImg(o,b.dataset.rm)});
     m.querySelectorAll("[data-main]").forEach(b=>b.onclick=()=>{const id=b.dataset.main;o.imgs=[id,...o.imgs.filter(x=>x!==id)];save();render()});
+    m.querySelectorAll("[data-lab]").forEach(b=>b.onclick=()=>{const id=b.dataset.lab;const v=prompt("Rótulo da imagem (ex.: Frente, Perfil, Costas):",(o.lab&&o.lab[id])||"");if(v!==null){o.lab=o.lab||{};if(v.trim())o.lab[id]=v.trim();else delete o.lab[id];save();render()}});
+    if(cur==="personagens")bindGen(m,o);
     const ed=document.getElementById("ed");
     ed.ondragover=e=>e.preventDefault();
     ed.ondrop=e=>{e.preventDefault();addImages([...e.dataTransfer.files],o)};
